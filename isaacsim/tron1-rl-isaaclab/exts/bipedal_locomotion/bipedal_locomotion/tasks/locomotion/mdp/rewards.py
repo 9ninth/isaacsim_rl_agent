@@ -530,5 +530,14 @@ class ActionSmoothnessPenalty(ManagerTermBase):
         startup_env_mask = env.episode_length_buf < 3
         penalty[startup_env_mask] = 0
 
+        # Clamp penalty to prevent explosion
+        penalty = torch.clamp(penalty, min=-1000.0, max=1000.0)
+
         # Return the penalty scaled by the configured weight
         return penalty
+
+
+def action_rate_l2_clamped(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalize the rate of change of the actions using L2 squared kernel with clamping to prevent reward explosion."""
+    penalty = torch.sum(torch.square(env.action_manager.action - env.action_manager.prev_action), dim=1)
+    return torch.clamp(penalty, min=-1000.0, max=1000.0)

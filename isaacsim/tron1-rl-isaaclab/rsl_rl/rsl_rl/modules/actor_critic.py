@@ -86,7 +86,7 @@ class ActorCritic(nn.Module):
                     torch.nn.init.orthogonal_(actor_layers[-1].weight, np.sqrt(2))
                     torch.nn.init.constant_(actor_layers[-1].bias, 0.0)
                 actor_layers.append(activation)
-                # actor_layers.append(torch.nn.LayerNorm(actor_hidden_dims[l + 1]))
+                actor_layers.append(nn.LayerNorm(actor_hidden_dims[l + 1]))
         self.actor = nn.Sequential(*actor_layers)
 
         # Value function
@@ -107,15 +107,14 @@ class ActorCritic(nn.Module):
                     torch.nn.init.orthogonal_(critic_layers[-1].weight, np.sqrt(2))
                     torch.nn.init.constant_(critic_layers[-1].bias, 0.0)
                 critic_layers.append(activation)
-                # critic_layers.append(torch.nn.LayerNorm(critic_hidden_dims[l + 1]))
+                critic_layers.append(nn.LayerNorm(critic_hidden_dims[l + 1]))
         self.critic = nn.Sequential(*critic_layers)
 
         print(f"Actor MLP: {self.actor}")
         print(f"Critic MLP: {self.critic}")
 
         # Action noise
-        # self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
-        self.logstd = nn.Parameter(torch.zeros(num_actions))
+        self.logstd = nn.Parameter(np.log(init_noise_std) * torch.ones(num_actions))
         self.distribution = None
         # disable args validation for speedup
         Normal.set_default_validate_args = False
@@ -154,6 +153,8 @@ class ActorCritic(nn.Module):
 
     def update_distribution(self, observations):
         mean = self.actor(observations)
+        # Clamp logstd between -3.0 (std ~0.05) and 0.5 (std ~1.65)
+        self.logstd.data.clamp_(-3.0, 0.5)
         self.distribution = Normal(mean, mean * 0.0 + torch.exp(self.logstd))
 
     def act(self, observations, **kwargs):

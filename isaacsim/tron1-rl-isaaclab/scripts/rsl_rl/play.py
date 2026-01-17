@@ -123,27 +123,56 @@ def main():
     # reset environment
     obs, obs_dict = env.get_observations()
     obs_history = obs_dict["observations"].get("obsHistory")
-    obs_history = obs_history.flatten(start_dim=1)
+    if obs_history is not None:
+        obs_history = obs_history.flatten(start_dim=1)
     commands = obs_dict["observations"].get("commands") 
+    
+    print("[INFO] Starting simulation loop...")
+    count = 0
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
-            est = encoder(obs_history)
-            actions = policy(torch.cat((est, obs, commands), dim=-1).detach())
+            if encoder is not None and obs_history is not None:
+                est = encoder(obs_history)
+            else:
+                est = torch.zeros((env.num_envs, 0), device=env.unwrapped.device)
+            
+            # Force command velocity to zero
+            if commands is not None:
+                commands[:] = 0.0
+            
+            # Combine observations as expected by policy
+            policy_input = torch.cat((est, obs, commands), dim=-1).detach()
+            
+            # Get raw actions from policy
+            raw_actions = policy(policy_input)
+            
+            # Clip actions to prevent violent movements
+            # Normal locomotion actions should be within [-1, 1], we allow a bit more.
+            actions = torch.clamp(raw_actions, -1.5, 1.5)
+            
+            if count % 100 == 0:
+                print(f"Step {count} | Raw Action range: [{raw_actions.min():.3f}, {raw_actions.max():.3f}] | Clipped: [{actions.min():.3f}, {actions.max():.3f}]")
+                print(f"        | Obs range: [{obs.min():.3f}, {obs.max():.3f}] | Est range: [{est.min():.3f}, {est.max():.3f}]")
+                if torch.isnan(raw_actions).any():
+                    print("[ERROR] NaNs detected in actions!")
+            
             # env stepping
             obs, _, _, infos = env.step(actions)
+            
             obs_history = infos["observations"].get("obsHistory")
-            obs_history = obs_history.flatten(start_dim=1)
+            if obs_history is not None:
+                obs_history = obs_history.flatten(start_dim=1)
             commands = infos["observations"].get("commands") 
-
+            count += 1
     # close the simulator
     env.close()
 
 
 if __name__ == "__main__":
-    EXPORT_POLICY = True
+    EXPORT_POLICY = False
     # run the main execution
     main()
     # close sim app

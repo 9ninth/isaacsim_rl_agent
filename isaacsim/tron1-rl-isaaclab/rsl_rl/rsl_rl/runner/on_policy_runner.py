@@ -189,6 +189,18 @@ class OnPolicyRunner:
                         rewards.to(self.device),
                         dones.to(self.device),
                     )
+                    
+                    if torch.isnan(obs).any():
+                        print("[ERROR] NaNs detected in observations!")
+                        print(f"Obs: {obs}")
+                        raise ValueError("NaNs in observations")
+                    if torch.isnan(rewards).any():
+                        print("[ERROR] NaNs detected in rewards!")
+                        raise ValueError("NaNs in rewards")
+                    if torch.isnan(actions).any():
+                        print("[ERROR] NaNs detected in actions!")
+                        raise ValueError("NaNs in actions")
+
                     self.alg.process_env_step(rewards, dones, infos, obs)
 
                     if self.log_dir is not None:
@@ -230,6 +242,18 @@ class OnPolicyRunner:
                 mean_surrogate_loss,
                 mean_kl,
             ) = self.alg.update()
+
+            # Check for NaNs in weights
+            for name, param in self.alg.actor_critic.named_parameters():
+                if torch.isnan(param).any():
+                    print(f"[ERROR] NaNs detected in model weights: {name}")
+                    raise ValueError(f"NaNs in model weights: {name}")
+            if self.alg.encoder is not None:
+                for name, param in self.alg.encoder.named_parameters():
+                    if torch.isnan(param).any():
+                        print(f"[ERROR] NaNs detected in encoder weights: {name}")
+                        raise ValueError(f"NaNs in encoder weights: {name}")
+
             stop = time.time()
             learn_time = stop - start
 

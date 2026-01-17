@@ -377,7 +377,7 @@ class RewardsCfg:
     pen_ang_vel_xy = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     pen_joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-0.00008)
     pen_joint_accel = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-07)
-    pen_action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.03)
+    pen_action_rate = RewTerm(func=mdp.action_rate_l2_clamped, weight=-0.03)
     pen_joint_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-2.0)
     pen_undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,

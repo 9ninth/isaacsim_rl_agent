@@ -82,6 +82,7 @@ class MLP_Encoder(nn.Module):
                     torch.nn.init.orthogonal_(encoder_layers[-1].weight, np.sqrt(2))
                     torch.nn.init.constant_(encoder_layers[-1].bias, 0.0)
                 encoder_layers.append(activation)
+                encoder_layers.append(nn.LayerNorm(hidden_dims[l + 1]))
         self.encoder = nn.Sequential(*encoder_layers)
 
         print(f"Encoder MLP: {self.encoder}")
