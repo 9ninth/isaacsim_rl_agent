@@ -41,12 +41,15 @@ class PFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 @configclass
 class PF_TRON1AFlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
-    max_iterations = 10000
+    max_iterations = 20000
     save_interval = 200
     experiment_name = "pf_tron_1a_flat"
     empirical_normalization = False
+    resume = False
+    load_run = ""
+    load_checkpoint = ""
     policy = RslRlPpoActorCriticCfg(
-        init_noise_std=0.5,
+        init_noise_std=1.0,
         actor_hidden_dims=[512, 256, 128],
         critic_hidden_dims=[512, 256, 128],
         activation="elu",
@@ -59,12 +62,12 @@ class PF_TRON1AFlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         entropy_coef=0.01,
         num_learning_epochs=5,
         num_mini_batches=4,
-        learning_rate=3.0e-4,
-        schedule="fixed",
+        learning_rate=5.0e-4,
+        schedule="adaptive",
         gamma=0.99,
         lam=0.95,
-        desired_kl=0.005,
-        max_grad_norm=0.5,
+        desired_kl=0.01,
+        max_grad_norm=1.0,
         obs_history_len=10,
     )
     encoder = EncoderCfg(
